@@ -168,6 +168,17 @@ static void find_java(char* out, int outsz) {
     snprintf(out, outsz, "java");
 }
 
+/* 探测某个命令是否在 PATH 中可用（跨平台） */
+static int cmd_exists(const char* name) {
+#ifdef _WIN32
+    char c[256]; snprintf(c, sizeof(c), "where %s >nul 2>&1", name);
+    return system(c) == 0;
+#else
+    char c[256]; snprintf(c, sizeof(c), "command -v %s >/dev/null 2>&1", name);
+    return system(c) == 0;
+#endif
+}
+
 /* 解析 apktool 命令前缀：有 jar 用 java -jar，否则用系统 apktool 命令 */
 static void apktool_prefix(char* out, int outsz, const char* java) {
     if (access("tools/apktool.jar", 0) == 0) {
@@ -401,15 +412,30 @@ static void worker(void* arg) {
     snprintf(cmd, sizeof(cmd), "%s b -f -o \"%s\" \"%s\"", apkcmd, unsigned_apk, decoded);
     if (run_capture(cmd) != 0) { goto fail; }
 
-    /* 4) 重签名 */
+    /* 4) 重签名：优先 uber-apk-signer，回退到系统 apksigner（Termux / Linux 常见） */
     set_progress(85);
-    append_log("重新签名 APK（uber-apk-signer）…");
-    snprintf(cmd, sizeof(cmd), "%s -jar \"tools/uber-apk-signer.jar\" --apks \"%s\" --out \"%s\"",
-             java, unsigned_apk, signed_dir);
-    if (run_capture(cmd) != 0) { goto fail; }
-
-    find_first_apk(signed_dir, signed_apk, sizeof(signed_apk));
-    if (signed_apk[0] == '\0') { snprintf(g_job.error,sizeof(g_job.error),"未找到签名后的 APK"); goto fail; }
+    if (access("tools/uber-apk-signer.jar", 0) == 0) {
+        append_log("重新签名 APK（uber-apk-signer）…");
+        snprintf(cmd, sizeof(cmd), "%s -jar \"tools/uber-apk-signer.jar\" --apks \"%s\" --out \"%s\"",
+                 java, unsigned_apk, signed_dir);
+        if (run_capture(cmd) != 0) { goto fail; }
+        find_first_apk(signed_dir, signed_apk, sizeof(signed_apk));
+    } else {
+        append_log("重新签名 APK（apksigner）…");
+        snprintf(cmd, sizeof(cmd),
+            "KS=work/keystore.jks; if [ ! -f \"$KS\" ]; then keytool -genkeypair -v "
+            "-keystore \"$KS\" -storepass sigremover -keypass sigremover -alias sigremover "
+            "-keyalg RSA -keysize 2048 -validity 10000 -dname \"CN=sigremover,O=sigremover\"; fi; "
+            "apksigner sign --ks \"$KS\" --ks-key-alias sigremover --ks-pass pass:sigremover "
+            "--key-pass pass:sigremover --out \"%s/signed.apk\" \"%s\"",
+            signed_dir, unsigned_apk);
+        if (run_capture(cmd) != 0) { goto fail; }
+        snprintf(signed_apk, sizeof(signed_apk), "%s/signed.apk", signed_dir);
+    }
+    if (signed_apk[0] == '\0' || access(signed_apk, 0) != 0) {
+        snprintf(g_job.error, sizeof(g_job.error), "未找到签名后的 APK");
+        goto fail;
+    }
 
     /* 结果命名 */
     const char* base = strrchr(apk, '/');
@@ -533,8 +559,17 @@ static void handle_connection(int client) {
             else send_file(client, rp, rn);
         } else if (strcmp(path, "/api/health") == 0) {
             char h[256];
-            int ok = (access("tools/uber-apk-signer.jar", 0) == 0) ? 1 : 0;
-            snprintf(h, sizeof(h), "{\"ok\":%d}", ok);
+            int have_java = cmd_exists("java") || (access("jre/bin/java", 0) == 0);
+            int have_apktool = (access("tools/apktool.jar", 0) == 0) || cmd_exists("apktool");
+#ifdef _WIN32
+            int have_signer = (access("tools/uber-apk-signer.jar", 0) == 0);
+#else
+            int have_signer = (access("tools/uber-apk-signer.jar", 0) == 0) || cmd_exists("apksigner");
+#endif
+            int ok = have_java && have_apktool && have_signer;
+            snprintf(h, sizeof(h),
+                "{\"ok\":%d,\"java\":%d,\"apktool\":%d,\"signer\":%d}",
+                ok ? 1 : 0, have_java ? 1 : 0, have_apktool ? 1 : 0, have_signer ? 1 : 0);
             send_text(client, 200, "application/json", h, (int)strlen(h));
         } else {
             send_text(client, 404, "text/plain", "not found", 9);

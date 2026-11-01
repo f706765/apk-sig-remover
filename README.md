@@ -142,6 +142,29 @@ apk-sig-remover/
 
 ---
 
+## 手机也能用（Termux / Android）
+
+想在手机上直接处理 APK？Android 上的终端模拟器 [Termux](https://termux.dev) 即可运行本工具。
+它会用手机里的 `apktool` 与 `apksigner`，把同一份 C 源码编译成**匹配手机架构**的原生程序（无需 exe / 无需 x86 电脑）。
+
+一行命令安装并启动：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/f706765/apk-sig-remover/master/termux_install.sh)
+```
+
+脚本会自动完成：
+
+1. 安装依赖：`apktool` / `openjdk-17` / `apksigner` / `git` / `clang`；
+2. 拉取源码并编译出 `~/sigremover`；
+3. 启动本地服务。
+
+启动后，在**手机浏览器**打开 <http://127.0.0.1:5000>，操作和电脑版完全一致（拖入 `.apk` →「去除签名校验」→ 下载）。
+
+> 说明：原生启动器会优先用内置的 `uber-apk-signer.jar` 签名；若手机上拿不到该 jar，会自动**回退到系统 `apksigner`**，无需额外下载，体验更顺。
+
+---
+
 ## 开源协议
 
 本项目以 [MIT 协议](LICENSE) 开源。工具所依赖的 apktool、uber-apk-signer 遵循各自的开源许可。
