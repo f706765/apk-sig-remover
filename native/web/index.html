@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APK 签名校验移除工具</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>APK 签名校验移除工具</h1>
+      <p class="subtitle">上传安装包 · 一键去除签名校验 · 直接下载</p>
+    </header>
+
+    <section class="card" id="dropZone">
+      <div class="upload-icon">📦</div>
+      <p class="hint">将 <strong>.apk</strong> 安装包拖拽到此处，或</p>
+      <label class="btn file-btn">
+        选择安装包
+        <input type="file" id="fileInput" accept=".apk" hidden />
+      </label>
+      <p class="file-name" id="fileName"></p>
+    </section>
+
+    <div class="actions">
+      <button class="btn primary" id="removeBtn" disabled>去除签名校验</button>
+      <button class="btn ghost" id="resetBtn" disabled>重新选择</button>
+    </div>
+
+    <section class="card progress-card hidden" id="progressCard">
+      <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+      <div class="status" id="statusText">准备中…</div>
+      <pre class="log" id="logBox"></pre>
+      <a class="btn primary hidden" id="downloadBtn" href="#">⬇ 下载处理后的安装包</a>
+      <p class="error hidden" id="errorText"></p>
+    </section>
+
+    <footer>
+      <p class="disclaimer">
+        ⚠️ 本工具仅供<strong>安全研究、学习</strong>，以及对自己拥有合法权益的应用进行测试。
+        请勿用于侵犯他人著作权、绕过付费校验或任何违法用途。使用者须自行承担一切法律责任。
+      </p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

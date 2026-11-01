@@ -107,9 +107,10 @@ apk-sig-remover/
 │   ├── apktool_wrapper.py # apktool 封装
 │   ├── signature_patch.py # smali 签名校验补丁
 │   └── signer.py          # 重签名封装
-├── templates/index.html   # 中文界面
+├── templates/index.html   # 中文界面（Flask 版）
 ├── static/                # 样式与前端脚本
-├── tools/                 # 第三方 jar（setup.sh 下载）
+├── native/                # 原生 Windows/Linux 启动器（launcher.c + 内置界面）
+├── tools/                 # 第三方 jar（setup.sh 下载；Windows 包已内置）
 ├── work/                  # 运行期产物（已 gitignore）
 ├── requirements.txt
 ├── setup.sh
@@ -125,6 +126,19 @@ apk-sig-remover/
   则需要更针对性的手工补丁，工具会在日志中如实说明命中情况；
 - 部分应用还有额外的完整性校验（如腾讯乐固、360 加固、腾讯 Bugly 等），需先脱壳，超出本工具范围；
 - 处理后的 APK 仅供学习研究，安装前请确认你拥有相应权利。
+
+---
+
+## Windows 原生可执行版（无需 Python）
+
+不想装 Python / 命令行？提供了**原生 Windows `.exe`**：双击即可运行，内置 Web 界面，不依赖 Python。
+
+- 在 [Releases](https://github.com/f706765/apk-sig-remover/releases) 下载 `SigRemover-Windows.zip`；
+- 解压后双击 `SigRemover.exe`（自动打开浏览器到 http://127.0.0.1:5000）；
+- 前置：**安装 Java 17+**（或把 JRE 放到 `jre/` 目录）；`tools/` 下已含 `apktool.jar` 与 `uber-apk-signer.jar`；
+- 详细见压缩包内的 `使用说明.txt`。
+
+> 源码在 `native/`：`launcher.c` 用 MinGW 交叉编译为 `SigRemover.exe`（Linux 下也可直接编译运行）。
 
 ---
 
